@@ -174,7 +174,19 @@ export default function ArchivePage() {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-slate-900 truncate text-sm mb-1" title={book.title}>{book.title}</h3>
                           <p className="text-xs text-slate-500 truncate mb-2">{book.author}</p>
-                          <ArchiveStatusBadge status={book.status} />
+                          <div className="flex items-center gap-3">
+                            <ArchiveStatusBadge status={book.status} />
+                            {book.libraryUrl && book.status === 'found' && (
+                              <a
+                                href={book.libraryUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] flex items-center gap-1 text-green-600 hover:underline font-medium"
+                              >
+                                Library <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                       {book.availability && (
