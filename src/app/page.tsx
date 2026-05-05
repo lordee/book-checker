@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, Book as BookIcon, CheckCircle2, XCircle, ExternalLink, Library, Settings, X, ShieldCheck, Save, Check } from 'lucide-react';
+import { Search, Loader2, Book as BookIcon, CheckCircle2, XCircle, ExternalLink, Library, Settings, X, ShieldCheck, Save, Check, History } from 'lucide-react';
+import Link from 'next/link';
 
 interface Book {
   title: string;
@@ -177,6 +178,14 @@ export default function Home() {
         >
           <Settings className="h-6 w-6" />
         </button>
+
+        <Link
+          href="/archive"
+          className="absolute right-10 top-0 p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+          title="View Archive"
+        >
+          <History className="h-6 w-6" />
+        </Link>
 
         <header className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-slate-900 mb-2 flex items-center justify-center gap-3">
