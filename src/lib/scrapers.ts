@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 const CONFIG_FILE = path.join(process.cwd(), 'library-config.md');
 
@@ -238,8 +239,12 @@ async function downloadImage(url: string, filename: string): Promise<string | un
     const dir = path.join(process.cwd(), 'public', 'book-covers');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     
-    // Sanitize filename
-    const safeName = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.jpg';
+    // Create a unique hash based on the URL to avoid duplicates and ensure uniqueness
+    const hash = crypto.createHash('md5').update(url).digest('hex').substring(0, 8);
+    
+    // Sanitize filename and append hash
+    const sanitizedTitle = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
+    const safeName = `${sanitizedTitle}_${hash}.jpg`;
     const filePath = path.join(dir, safeName);
     
     fs.writeFileSync(filePath, Buffer.from(buffer));
@@ -313,9 +318,8 @@ export async function searchLibrary(title: string, author: string = ''): Promise
         
         if (libraryImgUrl) {
           // Skip placeholders and transparent GIFs
-          // We specifically identified MC.GIF as a placeholder in the user's report
+          // The user specifically requested NOT to skip MC.GIF anymore
           if (libraryImgUrl.includes('no_image.png') || 
-              libraryImgUrl.includes('MC.GIF') || 
               libraryImgUrl.includes('imageURL') ||
               libraryImgUrl.includes('spacer.gif')) {
             console.log(`Skipping placeholder image: ${libraryImgUrl}`);

@@ -19,7 +19,7 @@ export async function GET() {
       pin: pinMatch ? pinMatch[1].trim() : '',
       geminiApiKey: geminiMatch ? geminiMatch[1].trim() : ''
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to read config' }, { status: 500 });
   }
 }
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const content = `# Library Credentials\n\nMembership Code: ${code}\nPIN: ${pin}\nGemini API Key: ${geminiApiKey || ''}\n`;
     fs.writeFileSync(CONFIG_FILE, content, 'utf8');
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save config' }, { status: 500 });
   }
 }

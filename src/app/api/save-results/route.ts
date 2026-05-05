@@ -2,9 +2,51 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const filename = searchParams.get('filename');
     const dir = path.join(process.cwd(), 'saved-searches');
+
+    if (filename) {
+      const filePath = path.join(dir, filename);
+      if (!fs.existsSync(filePath)) {
+        return NextResponse.json({ error: 'Archive not found' }, { status: 404 });
+      }
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Basic parsing of the markdown content
+      const titleMatch = content.match(/# (.*)/);
+      const dateMatch = content.match(/Date: (.*)/);
+      const urlMatch = content.match(/Source URL: (.*)/);
+      
+      const bookSections = content.split('---');
+      const books = bookSections.slice(0, -1).map(section => {
+        const titleMatch = section.match(/### (?:✅|❌|⏳) (.*)/);
+        const authorMatch = section.match(/- Author: (.*)/);
+        const statusMatch = section.match(/- Status: (.*)/);
+        const availabilityMatch = section.match(/- Availability: (.*)/);
+        const libraryUrlMatch = section.match(/- Library Link: (.*)/);
+        const imageUrlMatch = section.match(/- Image: (.*)/);
+        
+        return {
+          title: titleMatch ? titleMatch[1].trim() : '',
+          author: authorMatch ? authorMatch[1].trim() : '',
+          status: statusMatch ? statusMatch[1].trim() : '',
+          availability: availabilityMatch ? availabilityMatch[1].trim() : '',
+          libraryUrl: libraryUrlMatch ? libraryUrlMatch[1].trim() : '',
+          imageUrl: imageUrlMatch ? imageUrlMatch[1].trim() : ''
+        };
+      }).filter(b => b.title);
+
+      return NextResponse.json({
+        title: titleMatch ? titleMatch[1] : filename,
+        date: dateMatch ? dateMatch[1] : '',
+        url: urlMatch ? urlMatch[1] : '',
+        books
+      });
+    }
+
     if (!fs.existsSync(dir)) {
       return NextResponse.json({ archives: [] });
     }
@@ -25,7 +67,7 @@ export async function GET() {
     }).sort((a, b) => b.date.localeCompare(a.date));
     
     return NextResponse.json({ archives });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to list archives' }, { status: 500 });
   }
 }
@@ -56,7 +98,16 @@ export async function POST(req: NextRequest) {
     mdContent += `Source URL: ${url}\n\n`;
     mdContent += `## Results\n\n`;
     
-    books.forEach((book: any) => {
+    interface BookResult {
+      title: string;
+      author: string;
+      status: string;
+      availability?: string;
+      libraryUrl?: string;
+      imageUrl?: string;
+    }
+
+    books.forEach((book: BookResult) => {
       const statusEmoji = book.status === 'found' ? '✅' : book.status === 'not_found' ? '❌' : '⏳';
       mdContent += `### ${statusEmoji} ${book.title}\n`;
       mdContent += `- Author: ${book.author}\n`;
@@ -85,7 +136,7 @@ export async function DELETE(req: NextRequest) {
       fs.unlinkSync(filePath);
     }
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to delete archive' }, { status: 500 });
   }
 }

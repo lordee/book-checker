@@ -44,6 +44,7 @@ export default function Home() {
         console.error('Failed to load settings:', err);
       }
     };
+    
     loadSettings();
   }, []);
 
