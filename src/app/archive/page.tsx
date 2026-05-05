@@ -109,10 +109,10 @@ export default function ArchivePage() {
             ) : (
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
                 {archives.map((archive) => (
-                  <button 
+                  <div 
                     key={archive.filename}
                     onClick={() => fetchArchiveDetail(archive.filename)}
-                    className={`w-full text-left bg-white rounded-xl p-4 border transition-all flex flex-col gap-2 hover:shadow-md ${selectedArchive?.filename === archive.filename ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}
+                    className={`w-full text-left bg-white rounded-xl p-4 border transition-all flex flex-col gap-2 hover:shadow-md cursor-pointer ${selectedArchive?.filename === archive.filename ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}
                   >
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-slate-900 text-sm line-clamp-2">{archive.title}</h3>
@@ -126,7 +126,7 @@ export default function ArchivePage() {
                     <span className="flex items-center gap-1 text-[11px] text-slate-500">
                       <Calendar className="h-3 w-3" /> {archive.date}
                     </span>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
