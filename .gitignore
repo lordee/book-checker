@@ -14,7 +14,11 @@
 /coverage
 
 # next.js
-/.next/
+/.next
+library-config.md
+saved-searches/
+public/book-covers/
+/
 /out/
 
 # production

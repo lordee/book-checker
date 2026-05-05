@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { scrapeGoodreadsList } from '@/lib/scrapers';
+import { scrapeGoodreadsList, scrapeRedditThread } from '@/lib/scrapers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,9 +8,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    const books = await scrapeGoodreadsList(url);
+    let books;
+    if (url.includes('reddit.com')) {
+      books = await scrapeRedditThread(url);
+    } else {
+      books = await scrapeGoodreadsList(url);
+    }
+    
     return NextResponse.json({ books });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
