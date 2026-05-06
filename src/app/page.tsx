@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, Book as BookIcon, CheckCircle2, XCircle, ExternalLink, Library, Settings, X, ShieldCheck, Save, Check, History } from 'lucide-react';
+import { Search, Loader2, Book as BookIcon, CheckCircle2, XCircle, ExternalLink, Library, Settings, X, ShieldCheck, Save, Check, History, ListPlus, List } from 'lucide-react';
 import Link from 'next/link';
 
 interface Book {
@@ -30,23 +30,42 @@ export default function Home() {
   const [filter, setFilter] = useState<BookWithStatus['status'] | 'all'>('all');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showListSelector, setShowListSelector] = useState<Book | null>(null);
+  const [userLists, setUserLists] = useState<{id: string, name: string}[]>([]);
 
   // Load settings on mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/config');
-        const data = await response.json();
-        if (data.code) setLibraryCode(data.code);
-        if (data.pin) setLibraryPin(data.pin);
-        if (data.geminiApiKey) setGeminiApiKey(data.geminiApiKey);
+        const configRes = await fetch('/api/config');
+        const configData = await configRes.json();
+        if (configData.code) setLibraryCode(configData.code);
+        if (configData.pin) setLibraryPin(configData.pin);
+        if (configData.geminiApiKey) setGeminiApiKey(configData.geminiApiKey);
+
+        const listsRes = await fetch('/api/lists');
+        const listsData = await listsRes.json();
+        setUserLists(listsData.lists || []);
       } catch (err) {
-        console.error('Failed to load settings:', err);
+        console.error('Failed to load data:', err);
       }
     };
     
-    loadSettings();
+    loadData();
   }, []);
+
+  const addToList = async (listId: string, book: BookWithStatus) => {
+    try {
+      await fetch('/api/lists', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: listId, action: 'add', book }),
+      });
+      setShowListSelector(null);
+    } catch (err) {
+      console.error('Failed to add to list:', err);
+    }
+  };
 
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +205,14 @@ export default function Home() {
           title="View Archive"
         >
           <History className="h-6 w-6" />
+        </Link>
+
+        <Link
+          href="/lists"
+          className="absolute right-20 top-0 p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+          title="My Lists"
+        >
+          <List className="h-6 w-6" />
         </Link>
 
         <header className="mb-8 text-center">
@@ -352,6 +379,45 @@ export default function Home() {
           </div>
         )}
 
+        {showListSelector && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">Add to List</h3>
+                <button onClick={() => setShowListSelector(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-slate-600 mb-4 line-clamp-1">Adding <strong>{showListSelector.title}</strong> to...</p>
+                {userLists.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4 italic">No lists found. Create one first in the &quot;My Lists&quot; section.</p>
+                ) : (
+                  <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                    {userLists.map(list => (
+                      <button
+                        key={list.id}
+                        onClick={() => addToList(list.id, showListSelector as BookWithStatus)}
+                        className="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-sm font-medium"
+                      >
+                        {list.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="pt-4 border-t border-slate-100">
+                  <Link
+                    href="/lists"
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-semibold"
+                  >
+                    Manage Lists
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBooks.map((book, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all hover:shadow-md">
@@ -366,7 +432,16 @@ export default function Home() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-slate-900 truncate mb-1" title={book.title}>{book.title}</h3>
                   <p className="text-sm text-slate-500 truncate mb-2">{book.author}</p>
-                  <StatusBadge status={book.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={book.status} />
+                    <button 
+                      onClick={() => setShowListSelector(book)}
+                      className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                      title="Add to My List"
+                    >
+                      <ListPlus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
               

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Library, ArrowLeft, Calendar, ExternalLink, Trash2, FileText, Loader2, Book as BookIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { Library, ArrowLeft, Calendar, ExternalLink, Trash2, FileText, Loader2, Book as BookIcon, CheckCircle2, XCircle, ListPlus, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface Archive {
@@ -29,22 +29,41 @@ export default function ArchivePage() {
   const [selectedArchive, setSelectedArchive] = useState<ArchiveDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showListSelector, setShowListSelector] = useState<ArchivedBook | null>(null);
+  const [userLists, setUserLists] = useState<{id: string, name: string}[]>([]);
 
   useEffect(() => {
-    const fetchArchives = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/save-results');
-        const data = await response.json();
-        setArchives(data.archives || []);
+        const archivesRes = await fetch('/api/save-results');
+        const archivesData = await archivesRes.json();
+        setArchives(archivesData.archives || []);
+
+        const listsRes = await fetch('/api/lists');
+        const listsData = await listsRes.json();
+        setUserLists(listsData.lists || []);
       } catch (err) {
-        console.error('Failed to fetch archives:', err);
+        console.error('Failed to load data:', err);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchArchives();
+    loadData();
   }, []);
+
+  const addToList = async (listId: string, book: ArchivedBook) => {
+    try {
+      await fetch('/api/lists', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: listId, action: 'add', book }),
+      });
+      setShowListSelector(null);
+    } catch (err) {
+      console.error('Failed to add to list:', err);
+    }
+  };
 
   const fetchArchiveDetail = async (filename: string) => {
     setLoadingDetail(true);
@@ -186,6 +205,13 @@ export default function ArchivePage() {
                                 Library <ExternalLink className="h-3 w-3" />
                               </a>
                             )}
+                            <button 
+                              onClick={() => setShowListSelector(book)}
+                              className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                              title="Add to My List"
+                            >
+                              <ListPlus className="h-3 w-3" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -212,6 +238,45 @@ export default function ArchivePage() {
         <p className="mt-12 text-center text-[11px] text-slate-400">
           Archives are stored as Markdown files in the <code>saved-searches/</code> directory.
         </p>
+
+        {showListSelector && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-slate-900">Add to List</h3>
+                <button onClick={() => setShowListSelector(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-slate-600 mb-4 line-clamp-1">Adding <strong>{showListSelector.title}</strong> to...</p>
+                {userLists.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4 italic">No lists found. Create one first in the &quot;My Lists&quot; section.</p>
+                ) : (
+                  <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                    {userLists.map(list => (
+                      <button
+                        key={list.id}
+                        onClick={() => addToList(list.id, showListSelector)}
+                        className="w-full text-left px-4 py-2 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-sm font-medium"
+                      >
+                        {list.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="pt-4 border-t border-slate-100">
+                  <Link
+                    href="/lists"
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors text-sm font-semibold"
+                  >
+                    Manage Lists
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
