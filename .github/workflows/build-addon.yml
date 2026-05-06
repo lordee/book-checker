@@ -1,0 +1,95 @@
+name: Build Home Assistant Add-on
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'book_checker/config.yaml'
+  workflow_dispatch: 
+
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/book-checker
+
+jobs:
+  tag:
+    name: Auto-tag version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_tag: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' book_checker/config.yaml | sed 's/version: //; s/"//g; s/ //g')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create and Push Tag
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$VERSION"
+            git push origin "$VERSION"
+          fi
+
+  build:
+    name: Build ${{ matrix.arch }} image
+    needs: tag
+    runs-on: ubuntu-latest # Changed to ubuntu-latest for simplicity
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        arch: ["amd64", "aarch64"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        uses: home-assistant/builder/actions/build-image@master
+        with:
+          arch: ${{ matrix.arch }}
+          context: book_checker
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          image: ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-book-checker
+          image-tags: |
+            ${{ needs.tag.outputs.new_tag }}
+            latest
+          push: true
+          version: ${{ needs.tag.outputs.new_tag }}
+
+  manifest:
+    name: Publish multi-arch manifest
+    needs: [tag, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Publish multi-arch manifest
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@master
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          image-name: book-checker #ghcr.io/${{ github.repository_owner }}/{arch}-book-checker
+          image-tags: |
+            ${{ needs.tag.outputs.new_tag }}
+            latest
+          cosign: false

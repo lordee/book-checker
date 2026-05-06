@@ -1,18 +1,18 @@
 name: "Book Checker"
 version: "1.0.0"
 slug: "book_checker"
-description: "A Next.js application to check and manage your books."
+description: "An app to check if books are available in south australia library network."
 url: "https://github.com/lordee/book-checker"
 arch:
   - aarch64
   - amd64
-  - armhf
-  - armv7
-  - i386
 init: false
+ingress: true
+ingress_port: 3000
 map:
   - share:rw
 ports:
   3000/tcp: 3000
 options: {}
 schema: {}
+image: "ghcr.io/lordee/book-checker"
