@@ -1,0 +1,14 @@
+services:
+  book-checker:
+    build: .
+    container_name: book-checker
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount local directories into the container for permanent storage
+      - ./custom-lists:/app/custom-lists
+      - ./saved-searches:/app/saved-searches
+      - ./public/book-covers:/app/public/book-covers
+      # Mount the config file (Ensure this file exists on your host first!)
+      - ./library-config.md:/app/library-config.md
+    restart: unless-stopped
