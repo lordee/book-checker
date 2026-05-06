@@ -259,9 +259,19 @@ export default function ListsPage() {
                         </div>
                         {book.availability && (
                           <div className="px-4 pb-4 mt-auto">
-                            <p className="text-[10px] font-medium text-slate-600 bg-slate-50 p-2 rounded line-clamp-2">
+                            <p className="text-[10px] font-medium text-slate-600 bg-slate-50 p-2 rounded line-clamp-2 mb-3">
                               {book.availability}
                             </p>
+                            {book.libraryUrl && book.status === 'found' && (
+                              <a
+                                href={book.libraryUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full py-2 text-center bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                              >
+                                Place Hold on Library Website
+                              </a>
+                            )}
                           </div>
                         )}
                       </div>
