@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Paths
-const PROJECT_ROOT = process.cwd();
+const PROJECT_ROOT = path.join(process.cwd(), '..');
 const LISTS_DIR = path.join(PROJECT_ROOT, 'custom-lists');
 const SAVED_SEARCHES_DIR = path.join(PROJECT_ROOT, 'saved-searches');
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');

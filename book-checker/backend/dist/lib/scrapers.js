@@ -44,8 +44,8 @@ const generative_ai_1 = require("@google/generative-ai");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
-// Adjusting paths to be relative to the project root (one level up from backend/src)
-const PROJECT_ROOT = path_1.default.join(__dirname, '..', '..', '..');
+// Use process.cwd() and go up one level to get the project root consistently
+const PROJECT_ROOT = path_1.default.join(process.cwd(), '..');
 const CONFIG_FILE = path_1.default.join(PROJECT_ROOT, 'library-config.md');
 function getGeminiApiKey() {
     try {
@@ -97,13 +97,46 @@ async function extractBooksWithGemini(text, apiKey) {
         return [];
     }
 }
+async function fetchWithRetry(url, options = {}, retries = 3, backoff = 1000) {
+    const timeout = options.timeout || 30000;
+    delete options.timeout;
+    for (let i = 0; i < retries; i++) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        }
+        catch (err) {
+            clearTimeout(id);
+            const isLastRetry = i === retries - 1;
+            const isTimeout = err.name === 'AbortError' || err.code === 'UND_ERR_CONNECT_TIMEOUT';
+            const isConnReset = err.code === 'ECONNRESET';
+            if (isLastRetry)
+                throw err;
+            if (isTimeout || isConnReset) {
+                console.warn(`Fetch failed (${err.code || err.name}), retrying in ${backoff}ms... (${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                backoff *= 2; // Exponential backoff
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw new Error('Fetch failed after retries');
+}
 async function scrapeGoodreadsList(url) {
     console.log('Scraping Goodreads URL:', url);
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithRetry(url, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+            },
+            timeout: 15000
         });
         if (!response.ok) {
             throw new Error(`Goodreads returned status ${response.status}`);
@@ -137,10 +170,11 @@ async function scrapeRedditThread(url) {
     console.log('Scraping Reddit URL:', url);
     try {
         const oldRedditUrl = url.replace('www.reddit.com', 'old.reddit.com').split('?')[0];
-        const response = await fetch(oldRedditUrl, {
+        const response = await fetchWithRetry(oldRedditUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
-            }
+            },
+            timeout: 15000
         });
         if (!response.ok) {
             throw new Error(`Reddit returned status ${response.status}`);
@@ -223,7 +257,7 @@ async function scrapeRedditThread(url) {
 }
 async function downloadImage(url, filename) {
     try {
-        const response = await fetch(url);
+        const response = await fetchWithRetry(url, { timeout: 10000 });
         if (!response.ok)
             return undefined;
         const buffer = await response.arrayBuffer();
@@ -244,55 +278,79 @@ async function downloadImage(url, filename) {
 }
 async function searchLibrary(title, author = '') {
     try {
-        const cleanTitle = title.replace(/\s+/g, ' ').trim();
-        const cleanAuthor = author ? author.replace(/\s+/g, ' ').trim() : '';
+        // Clean up the query: remove special characters that might confuse the library search
+        // Keep letters, numbers, and spaces. Remove things like (#1), [graphic novel], etc.
+        const cleanTitle = title
+            .replace(/\(.*?\)/g, '') // Remove (parentheses)
+            .replace(/\[.*?\]/g, '') // Remove [brackets]
+            .replace(/[^a-zA-Z0-9\s]/g, ' ') // Replace special chars with space
+            .replace(/\s+/g, ' ')
+            .trim();
+        const cleanAuthor = author
+            ? author.replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+            : '';
         const queryStr = cleanAuthor ? `${cleanTitle} ${cleanAuthor}` : cleanTitle;
         const query = encodeURIComponent(queryStr);
-        const url = `https://onecard.network/client/en_AU/mitcham/search/results?qu=${query}&dt=thumb`;
-        const response = await fetch(url, {
+        // Added qf=FORMAT%09Format%09BOOK%09Books to ensure only books are returned
+        const url = `https://onecard.network/client/en_AU/mitcham/search/results?qu=${query}&qf=FORMAT%09Format%09BOOK%09Books&dt=thumb`;
+        console.log(`Searching library for: "${queryStr}" (Books only)`);
+        const response = await fetchWithRetry(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+            },
+            timeout: 25000
         });
         if (!response.ok) {
+            console.error(`Library search failed with status: ${response.status}`);
             return { found: false };
         }
         const data = await response.text();
         const $ = cheerio.load(data);
+        // Check if results exist - updated with more selectors
         const noResultsFound = $('.no_results_wrapper').length > 0 ||
             $('#results_summary').text().includes('0 results found') ||
-            $('.noResults').length > 0;
+            $('.noResults').length > 0 ||
+            $('.results_cell').length === 0;
         if (noResultsFound) {
+            console.log(`No results found for "${queryStr}"`);
+            // If we searched with an author and found nothing, try again with just the title
             if (cleanAuthor) {
+                console.log(`Retrying with title only: "${cleanTitle}"`);
                 return searchLibrary(cleanTitle, '');
             }
             return { found: false };
         }
-        const firstResult = $('.result_cell').first();
+        // Look for the first result that matches
+        const firstResult = $('.results_cell').first();
         let availability = 'Check library for details';
-        const availText = firstResult.find('.availability').text().trim() || $('.availabilityCount').first().text().trim();
-        if (availText) {
-            availability = availText;
+        // The library site often loads availability via JS, but sometimes there's a fallback or summary
+        const availText = firstResult.find('.availability').text().trim() ||
+            $('.availabilityCount').first().text().trim() ||
+            firstResult.find('.results_right').text().trim();
+        if (availText && availText.length > 2) {
+            availability = availText.replace(/\s+/g, ' ').trim();
         }
+        console.log(`Found result for "${cleanTitle}". Availability: ${availability}`);
+        // Extract image
         let localImageUrl = undefined;
         const resultCells = $('.results_cell');
-        for (let i = 0; i < Math.min(resultCells.length, 5); i++) {
+        for (let i = 0; i < Math.min(resultCells.length, 3); i++) {
             const cell = $(resultCells[i]);
             const imgElements = cell.find('.thumbnail img, img.results_img, .results_img_container img');
             let foundValidImage = false;
             for (let j = 0; j < imgElements.length; j++) {
                 let libraryImgUrl = $(imgElements[j]).attr('src');
                 if (libraryImgUrl) {
-                    if (libraryImgUrl.includes('no_image.png') ||
-                        libraryImgUrl.includes('imageURL') ||
-                        libraryImgUrl.includes('spacer.gif')) {
+                    if (libraryImgUrl.includes('no_image.png') || libraryImgUrl.includes('imageURL') || libraryImgUrl.includes('spacer.gif'))
                         continue;
-                    }
-                    if (libraryImgUrl.startsWith('/')) {
+                    if (libraryImgUrl.startsWith('/'))
                         libraryImgUrl = `https://onecard.network${libraryImgUrl}`;
-                    }
                     if (libraryImgUrl.startsWith('http')) {
-                        localImageUrl = await downloadImage(libraryImgUrl, `${cleanTitle}_${cleanAuthor}_${i}_${j}`);
+                        localImageUrl = await downloadImage(libraryImgUrl, `${cleanTitle.substring(0, 20)}_${i}`);
                         if (localImageUrl) {
                             foundValidImage = true;
                             break;

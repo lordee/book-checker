@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-// Use process.cwd() to get the project root consistently
-const PROJECT_ROOT = process.cwd();
+// Use process.cwd() and go up one level to get the project root consistently
+const PROJECT_ROOT = path.join(process.cwd(), '..');
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');
 
 function getGeminiApiKey(): string | null {

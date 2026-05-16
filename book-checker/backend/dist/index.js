@@ -13,7 +13,7 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // Paths
-const PROJECT_ROOT = path_1.default.join(__dirname, '..', '..', '..');
+const PROJECT_ROOT = path_1.default.join(process.cwd(), '..');
 const LISTS_DIR = path_1.default.join(PROJECT_ROOT, 'custom-lists');
 const SAVED_SEARCHES_DIR = path_1.default.join(PROJECT_ROOT, 'saved-searches');
 const CONFIG_FILE = path_1.default.join(PROJECT_ROOT, 'library-config.md');

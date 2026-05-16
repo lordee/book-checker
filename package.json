@@ -2,10 +2,10 @@
   "name": "book-checker-monorepo",
   "version": "1.0.0",
   "scripts": {
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd book-checker/backend && npm run dev",
+    "dev:frontend": "cd book-checker/frontend && npm run dev",
     "dev": "npm run dev:backend & npm run dev:frontend",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install",
-    "build:all": "cd backend && npm run build && cd ../frontend && npm run build"
+    "install:all": "cd book-checker/backend && npm install && cd ../frontend && npm install",
+    "build:all": "cd book-checker/backend && npm run build && cd ../frontend && npm run build"
   }
 }
