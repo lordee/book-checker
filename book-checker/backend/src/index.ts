@@ -303,7 +303,7 @@ app.delete('/api/save-results', (req, res) => {
 
 // Catch-all for SPA
 if (fs.existsSync(FRONTEND_DIST)) {
-  app.get('(.*)', (req, res, next) => {
+  app.get('/:any*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/book-covers')) {
       return next();
     }
