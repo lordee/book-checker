@@ -1,6 +1,6 @@
 name: "Book Checker"
 description: "An app to check if books are available in south australia library network."
-version: "1.0.3"
+version: "1.0.4"
 slug: "book-checker"
 init: false
 arch:
