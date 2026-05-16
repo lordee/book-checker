@@ -27,7 +27,7 @@ jobs:
       - name: Extract version
         id: get_version
         run: |
-          VERSION=$(grep '^version:' book_checker/config.yaml | sed 's/version: //; s/"//g; s/ //g')
+          VERSION=$(grep '^version:' book-checker/config.yaml | sed 's/version: //; s/"//g; s/ //g')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create and Push Tag
@@ -67,7 +67,7 @@ jobs:
         uses: home-assistant/builder/actions/build-image@master
         with:
           arch: ${{ matrix.arch }}
-          context: book_checker
+          context: book-checker
           container-registry-password: ${{ secrets.GITHUB_TOKEN }}
           image: ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-book-checker
           image-tags: |
