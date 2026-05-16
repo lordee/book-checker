@@ -8,7 +8,7 @@ import { scrapeGoodreadsList, scrapeRedditThread, searchLibrary } from './lib/sc
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Paths
 const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
