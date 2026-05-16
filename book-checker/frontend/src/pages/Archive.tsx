@@ -34,10 +34,10 @@ export default function ArchivePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const archivesRes = await api.get('/save-results');
+        const archivesRes = await api.get('save-results');
         setArchives(archivesRes.data.archives || []);
 
-        const listsRes = await api.get('/lists');
+        const listsRes = await api.get('lists');
         setUserLists(listsRes.data.lists || []);
       } catch (err) {
         console.error('Failed to load data:', err);
@@ -51,7 +51,7 @@ export default function ArchivePage() {
 
   const addToList = async (listId: string, book: ArchivedBook) => {
     try {
-      await api.put('/lists', { id: listId, action: 'add', book });
+      await api.put('lists', { id: listId, action: 'add', book });
       setShowListSelector(null);
     } catch (err) {
       console.error('Failed to add to list:', err);
@@ -61,7 +61,7 @@ export default function ArchivePage() {
   const fetchArchiveDetail = async (filename: string) => {
     setLoadingDetail(true);
     try {
-      const response = await api.get(`/save-results?filename=${filename}`);
+      const response = await api.get(`save-results?filename=${filename}`);
       setSelectedArchive(response.data);
     } catch (err) {
       console.error('Failed to fetch archive detail:', err);
@@ -75,7 +75,7 @@ export default function ArchivePage() {
     if (!confirm('Are you sure you want to delete this archive?')) return;
     
     try {
-      const response = await api.delete('/save-results', { data: { filename } });
+      const response = await api.delete('save-results', { data: { filename } });
       if (response.status === 200) {
         setArchives(prev => prev.filter(a => a.filename !== filename));
         if (selectedArchive?.filename === filename) setSelectedArchive(null);

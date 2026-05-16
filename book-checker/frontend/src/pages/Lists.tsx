@@ -33,7 +33,7 @@ export default function ListsPage() {
 
   const fetchLists = async () => {
     try {
-      const response = await api.get('/lists');
+      const response = await api.get('lists');
       setLists(response.data.lists || []);
     } catch (err) {
       console.error('Failed to fetch lists:', err);
@@ -49,7 +49,7 @@ export default function ListsPage() {
   const fetchListDetail = async (id: string) => {
     setLoadingDetail(true);
     try {
-      const response = await api.get(`/lists?id=${id}`);
+      const response = await api.get(`lists?id=${id}`);
       setSelectedList(response.data);
     } catch (err) {
       console.error('Failed to fetch list detail:', err);
@@ -64,7 +64,7 @@ export default function ListsPage() {
     setIsCreating(true);
     
     try {
-      const response = await api.post('/lists', { name: newListName.trim() });
+      const response = await api.post('lists', { name: newListName.trim() });
       const newList = response.data;
       setLists([newList, ...lists]);
       setNewListName('');
@@ -81,7 +81,7 @@ export default function ListsPage() {
     if (!confirm('Are you sure you want to delete this list?')) return;
     
     try {
-      const response = await api.delete('/lists', { data: { id } });
+      const response = await api.delete('lists', { data: { id } });
       if (response.status === 200) {
         setLists(prev => prev.filter(l => l.id !== id));
         if (selectedList?.id === id) setSelectedList(null);
@@ -95,7 +95,7 @@ export default function ListsPage() {
     if (!selectedList) return;
     
     try {
-      const response = await api.put('/lists', { 
+      const response = await api.put('lists', { 
         id: selectedList.id, 
         action: 'remove', 
         bookIndex,

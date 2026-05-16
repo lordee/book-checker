@@ -35,13 +35,13 @@ export default function Home() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const configRes = await api.get('/config');
+        const configRes = await api.get('config');
         const configData = configRes.data;
         if (configData.code) setLibraryCode(configData.code);
         if (configData.pin) setLibraryPin(configData.pin);
         if (configData.geminiApiKey) setGeminiApiKey(configData.geminiApiKey);
 
-        const listsRes = await api.get('/lists');
+        const listsRes = await api.get('lists');
         const listsData = listsRes.data;
         setUserLists(listsData.lists || []);
       } catch (err) {
@@ -54,7 +54,7 @@ export default function Home() {
 
   const addToList = async (listId: string, book: BookWithStatus) => {
     try {
-      await api.put('/lists', { id: listId, action: 'add', book });
+      await api.put('lists', { id: listId, action: 'add', book });
       setShowListSelector(null);
     } catch (err) {
       console.error('Failed to add to list:', err);
@@ -64,7 +64,7 @@ export default function Home() {
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/config', { code: libraryCode, pin: libraryPin, geminiApiKey });
+      const response = await api.post('config', { code: libraryCode, pin: libraryPin, geminiApiKey });
       if (response.status === 200) {
         setShowSettings(false);
       } else {
@@ -80,7 +80,7 @@ export default function Home() {
     if (books.length === 0) return;
     setSaving(true);
     try {
-      const response = await api.post('/save-results', { url, books });
+      const response = await api.post('save-results', { url, books });
       if (response.status === 200) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -99,7 +99,7 @@ export default function Home() {
     setBooks([]);
     setSaved(false);
     try {
-      const response = await api.post('/scrape', { url });
+      const response = await api.post('scrape', { url });
       const data = response.data;
       if (data.error) throw new Error(data.error);
       

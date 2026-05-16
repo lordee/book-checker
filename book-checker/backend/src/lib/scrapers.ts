@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-// Use process.cwd() and go up one level to get the project root consistently
-const PROJECT_ROOT = path.join(process.cwd(), '..');
+// Use environment variable or default to project root
+const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');
 
 function getGeminiApiKey(): string | null {
@@ -268,7 +268,7 @@ async function downloadImage(url: string, filename: string): Promise<string | un
     const filePath = path.join(dir, safeName);
     
     fs.writeFileSync(filePath, Buffer.from(buffer));
-    return `/book-covers/${safeName}`;
+    return `book-covers/${safeName}`;
   } catch (error) {
     console.error('Failed to download image:', error);
     return undefined;

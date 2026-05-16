@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Paths
-const PROJECT_ROOT = path.join(process.cwd(), '..');
+const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
 const LISTS_DIR = path.join(PROJECT_ROOT, 'custom-lists');
 const SAVED_SEARCHES_DIR = path.join(PROJECT_ROOT, 'saved-searches');
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');
@@ -21,6 +21,12 @@ const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 app.use(cors());
 app.use(express.json());
 app.use('/book-covers', express.static(path.join(PUBLIC_DIR, 'book-covers')));
+
+// Serve frontend static files in production
+const FRONTEND_DIST = path.join(process.cwd(), 'frontend-dist');
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+}
 
 // Ensure directories exist
 [LISTS_DIR, SAVED_SEARCHES_DIR, path.join(PUBLIC_DIR, 'book-covers')].forEach(dir => {
@@ -294,6 +300,16 @@ app.delete('/api/save-results', (req, res) => {
     res.status(500).json({ error: 'Failed to delete archive' });
   }
 });
+
+// Catch-all for SPA
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/book-covers')) {
+      return next();
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
