@@ -56,16 +56,18 @@ A modern full-stack application to check book availability at **Mitcham Library 
     npm run install:all
     ```
 
-### Running the Application
+### Running with Docker
 
-Start both the backend and frontend development servers simultaneously:
+You can run the entire stack using Docker Compose:
 
 ```bash
-npm run dev
+docker-compose up --build
 ```
 
--   **Frontend:** `http://localhost:5173`
+-   **Frontend:** `http://localhost` (Port 80)
 -   **Backend:** `http://localhost:3001`
+
+Data and book covers are persisted via volumes in the `book-checker/` directory.
 
 ## ⚙️ Configuration
 
