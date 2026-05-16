@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./book-checker/backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./book-checker/custom-lists:/app/custom-lists
+      - ./book-checker/saved-searches:/app/saved-searches
+      - ./book-checker/public:/app/public
+      - ./library-config.md:/app/library-config.md
+    environment:
+      - PORT=3001
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: always
+
+  frontend:
+    build:
+      context: ./book-checker/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
