@@ -301,7 +301,7 @@ app.delete('/api/save-results', (req, res) => {
   }
 });
 
-// Catch-all for SPA
+// Catch-all for SPA moved to end
 if (fs.existsSync(FRONTEND_DIST)) {
   app.get(/.*/, (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/book-covers')) {
@@ -311,6 +311,6 @@ if (fs.existsSync(FRONTEND_DIST)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend server running on port ${PORT}`);
 });
