@@ -5,7 +5,9 @@ import path from 'path';
 import crypto from 'crypto';
 
 // Use environment variable or default to project root
-const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
+const isDocker = fs.existsSync('/.dockerenv') || (fs.existsSync('/proc/1/cgroup') && fs.readFileSync('/proc/1/cgroup', 'utf8').includes('docker'));
+const DEFAULT_ROOT = isDocker ? '/data' : path.join(process.cwd(), '..', 'data');
+const PROJECT_ROOT = process.env.PROJECT_ROOT || DEFAULT_ROOT;
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');
 
 function getGeminiApiKey(): string | null {

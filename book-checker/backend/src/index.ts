@@ -8,10 +8,15 @@ import { scrapeGoodreadsList, scrapeRedditThread, searchLibrary } from './lib/sc
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 5173;
 
 // Paths
-const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
+// In Home Assistant, /data is the persistent storage. 
+// Locally, we fallback to a 'data' directory in the project root.
+const isDocker = fs.existsSync('/.dockerenv') || fs.existsSync('/proc/1/cgroup') && fs.readFileSync('/proc/1/cgroup', 'utf8').includes('docker');
+const DEFAULT_ROOT = isDocker ? '/data' : path.join(process.cwd(), '..', 'data');
+const PROJECT_ROOT = process.env.PROJECT_ROOT || DEFAULT_ROOT;
+
 const LISTS_DIR = path.join(PROJECT_ROOT, 'custom-lists');
 const SAVED_SEARCHES_DIR = path.join(PROJECT_ROOT, 'saved-searches');
 const CONFIG_FILE = path.join(PROJECT_ROOT, 'library-config.md');
@@ -20,18 +25,41 @@ const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve book covers from PUBLIC_DIR
 app.use('/book-covers', express.static(path.join(PUBLIC_DIR, 'book-covers')));
 
 // Serve frontend static files in production
-const FRONTEND_DIST = path.join(process.cwd(), 'frontend-dist');
-if (fs.existsSync(FRONTEND_DIST)) {
-  app.use(express.static(FRONTEND_DIST));
+// Check multiple possible locations for frontend-dist
+const FRONTEND_DIST_LOCATIONS = [
+  path.join(process.cwd(), 'frontend-dist'),       // Docker structure
+  path.join(process.cwd(), '..', 'frontend', 'dist') // Local dev structure
+];
+
+let frontendDistPath = '';
+for (const loc of FRONTEND_DIST_LOCATIONS) {
+  if (fs.existsSync(loc)) {
+    frontendDistPath = loc;
+    break;
+  }
+}
+
+if (frontendDistPath) {
+  console.log(`Serving frontend from ${frontendDistPath}`);
+  app.use(express.static(frontendDistPath));
+} else {
+  console.warn('Frontend distribution directory not found. API only mode.');
 }
 
 // Ensure directories exist
 [LISTS_DIR, SAVED_SEARCHES_DIR, path.join(PUBLIC_DIR, 'book-covers')].forEach(dir => {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    } catch (err) {
+      console.error(`Failed to create directory ${dir}:`, err);
+    }
   }
 });
 
@@ -302,15 +330,15 @@ app.delete('/api/save-results', (req, res) => {
 });
 
 // Catch-all for SPA moved to end
-if (fs.existsSync(FRONTEND_DIST)) {
+if (frontendDistPath) {
   app.get(/.*/, (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/book-covers')) {
       return next();
     }
-    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 }
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend server running on port ${PORT}`);
+  console.log(`Backend server is listening on 0.0.0.0:${PORT}`);
 });

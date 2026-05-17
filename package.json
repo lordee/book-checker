@@ -1,6 +1,6 @@
 {
   "name": "book-checker-monorepo",
-  "version": "1.0.1",
+  "version": "1.0.10",
   "scripts": {
     "dev:backend": "cd book-checker/backend && npm run dev",
     "dev:frontend": "cd book-checker/frontend && npm run dev",
